@@ -45,9 +45,6 @@ COPY bootstrap.sh /
 RUN chmod 755 /bootstrap.sh
 ENTRYPOINT [ "/bootstrap.sh" ]
 
-# Copy extension (temporary until s3)
-COPY extension.zip /tmp
-
 # Build app (last for cache speed)
 COPY function/. ${FUNCTION_DIR}
 RUN yarn build
