@@ -1,0 +1,49 @@
+ARG FUNCTION_DIR="/home/seluser/function"
+
+FROM selenium/standalone-chrome:3 as base
+ARG FUNCTION_DIR
+# install utils
+USER root
+ENV TZ UTC
+ENV CLEARCACHE NOW
+
+RUN apt update
+# RUN apt-get install -y software-properties-common build-essential libpq-dev
+RUN apt install -y curl wget git g++ make cmake unzip libcurl4-openssl-dev autoconf libtool
+
+# RUN apt-get -y install xvfb xorg xvfb gtk2-engines-pixbuf dbus-x11 xfonts-base xfonts-100dpi xfonts-75dpi xfonts-cyrillic xfonts-scalable
+
+
+# install NodeJS
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
+RUN apt install -y nodejs
+RUN npm install -g yarn
+
+RUN mkdir -p ${FUNCTION_DIR}
+COPY function/package.json ${FUNCTION_DIR}
+WORKDIR ${FUNCTION_DIR}
+
+# Add Lambda Runtime Interface Emulator and use a script in the ENTRYPOINT for simpler local runs
+ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie /usr/local/bin/aws-lambda-rie
+RUN chmod 755 /usr/local/bin/aws-lambda-rie
+COPY entrypoint.sh /
+RUN chmod 755 /entrypoint.sh
+ENTRYPOINT [ "/entrypoint.sh" ]
+
+RUN npm i aws-lambda-ric
+
+
+RUN chown -R seluser /home/seluser/
+USER seluser
+ENV SCREEN_WIDTH=1920 SCREEN_HEIGHT=1080
+
+RUN yarn
+COPY function/. ${FUNCTION_DIR}
+RUN yarn build
+
+WORKDIR ${FUNCTION_DIR}/.build
+
+
+CMD ["app.handler"]
+
+
